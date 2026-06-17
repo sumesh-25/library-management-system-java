@@ -4,13 +4,13 @@ class Book{
     private int book_id;
     private String title;
     private String author;
-    private boolean isIssued;
+    private User Borrower;
 
     Book(int book_id,String title, String author){
         this.book_id=book_id;
         this.title=title;
         this.author=author;
-        this.isIssued = false;
+        this.Borrower = null;
     }
 
     int getId(){
@@ -22,29 +22,81 @@ class Book{
     String getAuthor(){
         return author;
     }
-    boolean isIssued(){
-        return isIssued;
+    User getBorrower(){
+        return Borrower;
     }
-    void setIssue(boolean issue){
-        this.isIssued = issue;
+    void setBorrower(User borrower){
+        this.Borrower = borrower;
     }
 }
 
 class User{
-    private String username;
-    String Name;
+    private int userId;
+    private String name;
+    User(int userId, String name){
+        this.userId = userId;
+        this.name=name;
+    }
+
+    int getUserId(){
+        return userId;
+    }
+
+    String getName(){
+        return name;
+    }
+
+    
 }
 
 class Student extends User{
     String course;
+    Student(int userId, String name, String course){
+        super(userId,name);
+        this.course=course;
+    }
+    
 }
 
 class Teacher extends User{
     String department;
+    Teacher(int userId, String name, String department){
+        super(userId,name);
+        this.department=department;
+    }
 } 
 
 class Library{
     ArrayList<Book> books = new ArrayList<>();
+    ArrayList<User> users = new ArrayList<>();
+
+    void addStudent(int userId, String name, String course){
+        for(User u : users){
+            if(u.getUserId()==userId){
+                System.out.println("User Id Already Exist.");
+                return;
+            }
+        }
+        User student = new Student(userId, name, course);
+        users.add(student);
+    }
+
+    void addTeacher(int userId, String name, String department){
+        for(User u : users){
+            if(u.getUserId()==userId){
+                System.out.println("User Id Already Exist.");
+                return;
+            }
+        }
+        User teacher = new Teacher(userId, name, department);
+        users.add(teacher);
+    }
+
+    void displayUsers(){
+        for(User u : users){
+            System.out.println("ID: "+u.getUserId()+"\nName: "+u.getName());
+        }
+    }
 
     void addBook(int id, String title, String author){
         for(Book b: books){
@@ -58,7 +110,17 @@ class Library{
         System.out.println("Book Added");
     }
 
-
+    void removeBook(int id){
+        for(int i=0;i<books.size();i++){
+            Book b = books.get(i);
+            if(b.getId()==id){
+                books.remove(b);
+                System.out.println("Book Removed.");
+                return;
+            }
+        }
+        System.out.println("Book Not Found");
+    }
 
     void searchBooks(String name){
         name = name.toLowerCase();
@@ -66,7 +128,7 @@ class Library{
         for(Book b : books){
             String title = b.getTitle().toLowerCase();
 
-            if(title.contains(name)){System.out.println("ID: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor());} 
+            if(title.contains(name)){String borrowerName; if(b.getBorrower()==null) borrowerName = "none"; else borrowerName = b.getBorrower().getName(); System.out.println("ID: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor()+"\nIssued to: "+borrowerName);} 
         }
         
     }
@@ -76,17 +138,25 @@ class Library{
             System.out.println("NO books Available."); return;
         }
         for(Book b : books){
-            System.out.println("ID: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor()+"\nIssued: "+b.isIssued());
+            String borrowerName; if(b.getBorrower()==null) borrowerName = "none"; else borrowerName = b.getBorrower().getName();
+            System.out.println("ID: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor()+"\nIssued to: "+borrowerName);
         }
         
     }
 
-    void issueBook(int id){
+    void issueBook(int bookId, int userId){
         for(Book b : books){
-            if(b.getId()==id){
-                if(b.isIssued()==false){
-                    b.setIssue(true);
-                    System.out.println("Book issued");
+            if(b.getId()==bookId){
+                if(b.getBorrower()==null){
+                    for(User u : users){
+                        if(u.getUserId()==userId){
+                            b.setBorrower(u);
+                            System.out.println("Book issued to "+u.getName());
+                            return;
+                        }
+                        
+                    }
+                    System.out.println("User Not Found");
                     return;
                 }
                 else{
@@ -98,11 +168,11 @@ class Library{
         System.out.println("Book Not Found");
     }
 
-    void returnBook(int id){
+    void returnBook(int bookId){
         for(Book b : books){
-            if(b.getId()==id){
-                if(b.isIssued()==true){
-                    b.setIssue(false);
+            if(b.getId()==bookId){
+                if(b.getBorrower()!=null){
+                    b.setBorrower(null);
                     System.out.println("Book Returned");
                     return;
                 }
@@ -123,12 +193,39 @@ public class Main {
         Scanner sc = new Scanner(System.in);
         Library l = new Library();
         while (true) {
-            System.out.print("1.Add Book\n2.Remove Book\n3.Search Book\n4.Display Books\n5.Issue Book\n6.Return Book\n7.Exit\n Choice: ");
+            int userId;
+            int bookId;
+            System.out.print("1.Add Student\n2.Add Teacher\n3.Display Users\n4.Add Book\n5.Remove Book\n6.Search Book\n7.Display Books\n8.Issue Book\n9.Return Book\n10.Exit\n Choice: ");
             int choice = sc.nextInt();
-            switch (choice) {
+            switch (choice){
+                
                 case 1:
-                    System.out.print("Enter Book ID: ");
-                    int id = sc.nextInt();
+                    System.out.print("Enter Student ID: ");
+                    userId = sc.nextInt();
+                    sc.nextLine();
+                    System.out.print("Enter Student Name: ");
+                    String name = sc.nextLine();
+                    System.out.print("Enter Course: ");
+                    String course = sc.nextLine();
+                    l.addStudent(userId, name, course);
+                    break;
+                case 2:
+                    System.out.print("Enter Teacher ID: ");
+                    userId = sc.nextInt();
+                    sc.nextLine();
+                    System.out.print("Enter Teacher Name: ");
+                    name = sc.nextLine();
+                    System.out.print("Enter Department: ");
+                    String department = sc.nextLine();
+                    l.addTeacher(userId, name, department);
+                    break;
+                case 3:
+                    System.out.print("Users Using the library: \n");
+                    l.displayUsers();
+                    break;
+                case 4:
+                    System.out.print("Enter Book Id: ");
+                    bookId = sc.nextInt();
                     sc.nextLine();
                     System.out.print("Enter Book Title: ");
                     
@@ -136,39 +233,41 @@ public class Main {
                     System.out.print("Enter Author Name: ");
                     
                     String author = sc.nextLine();
-                    l.addBook(id,title,author);
+                    l.addBook(bookId,title,author);
                     break;
                 
-                case 2:
+                case 5:
                     System.out.print("Enter Book Id: ");
-                    id = sc.nextInt();
-                    l.removeBook(id);
+                    bookId = sc.nextInt();
+                    l.removeBook(bookId);
                     break;
                     
-                case 3:
+                case 6:
                     System.out.print("Enter Book name: ");
-                    String name = sc.next();
-                    l.searchBooks(name); 
+                    String bname = sc.next();
+                    l.searchBooks(bname); 
                     break;
                     
-                case 4:
-                    System.out.println("Books Present int he Library.");
+                case 7:
+                    System.out.println("Books Present in the Library.");
                     l.displayBooks();
                     break;
 
-                case 5:
+                case 8:
                     System.out.print("Enter Book Id: ");
-                    id=sc.nextInt();
-                    l.issueBook(id);
+                    bookId=sc.nextInt();
+                    System.out.print("Enter User Id: ");
+                    userId = sc.nextInt();
+                    l.issueBook(bookId,userId);
                     break;
 
-                case 6:
+                case 9:
                     System.out.print("Enter Book Id: ");
-                    id=sc.nextInt();
-                    l.returnBook(id);
+                    bookId=sc.nextInt();
+                    l.returnBook(bookId);
                     break;
 
-                case 7:
+                case 10:
                     System.out.println("Exiting...");
                     return;
                 default:

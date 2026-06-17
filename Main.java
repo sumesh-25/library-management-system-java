@@ -22,7 +22,7 @@ class Book{
     String getAuthor(){
         return author;
     }
-    boolean Issued(){
+    boolean isIssued(){
         return isIssued;
     }
     void setIssue(boolean issue){
@@ -47,8 +47,7 @@ class Library{
     ArrayList<Book> books = new ArrayList<>();
 
     void addBook(int id, String title, String author){
-        for(int i =0;i<books.size();i++){
-            Book b = books.get(i);
+        for(Book b: books){
             if(b.getId()==id){
                 System.out.println("Id Already Exist.");
                 return;
@@ -59,19 +58,12 @@ class Library{
         System.out.println("Book Added");
     }
 
-    void removeBook(int id){
-        for(int i=0; i< books.size();i++){
-            Book B = books.get(i);
-            if(B.getId()==id){books.remove(i); System.out.println("Book Removed."); return;} 
-        }
-        System.out.println("Book Not Found");
-    }
+
 
     void searchBooks(String name){
         name = name.toLowerCase();
         System.out.println("Searching...");
-        for(int i=0; i<books.size();i++){
-            Book b = books.get(i);
+        for(Book b : books){
             String title = b.getTitle().toLowerCase();
 
             if(title.contains(name)){System.out.println("ID: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor());} 
@@ -80,20 +72,19 @@ class Library{
     }
 
     void displayBooks(){
-        for(int i=0; i< books.size();i++){
-            Book b = books.get(i);
-            System.out.println("ID: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor()+"\nIssued: "+b.Issued());
-        }
         if(books.size()==0){
             System.out.println("NO books Available."); return;
         }
+        for(Book b : books){
+            System.out.println("ID: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor()+"\nIssued: "+b.isIssued());
+        }
+        
     }
 
     void issueBook(int id){
-        for(int i=0;i<books.size();i++){
-            Book b = books.get(i);
+        for(Book b : books){
             if(b.getId()==id){
-                if(b.Issued()==false){
+                if(b.isIssued()==false){
                     b.setIssue(true);
                     System.out.println("Book issued");
                     return;
@@ -108,10 +99,9 @@ class Library{
     }
 
     void returnBook(int id){
-        for(int i=0;i<books.size();i++){
-            Book b = books.get(i);
+        for(Book b : books){
             if(b.getId()==id){
-                if(b.Issued()==true){
+                if(b.isIssued()==true){
                     b.setIssue(false);
                     System.out.println("Book Returned");
                     return;
@@ -167,13 +157,13 @@ public class Main {
                     break;
 
                 case 5:
-                    System.out.println("Enter Book Id: ");
+                    System.out.print("Enter Book Id: ");
                     id=sc.nextInt();
                     l.issueBook(id);
                     break;
 
                 case 6:
-                    System.out.println("Enter Book Id: ");
+                    System.out.print("Enter Book Id: ");
                     id=sc.nextInt();
                     l.returnBook(id);
                     break;

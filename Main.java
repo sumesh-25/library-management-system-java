@@ -1,5 +1,6 @@
 import java.util.Scanner;
 import java.util.ArrayList;
+import java.util.HashMap;
 class Book{
     private int book_id;
     private String title;
@@ -67,77 +68,75 @@ class Teacher extends User{
 } 
 
 class Library{
-    ArrayList<Book> books = new ArrayList<>();
-    ArrayList<User> users = new ArrayList<>();
+    HashMap<Integer, Book> books = new HashMap<>();
+    HashMap<Integer, User> users = new HashMap<>();
 
     void addStudent(int userId, String name, String course){
-        for(User u : users){
-            if(u.getUserId()==userId){
-                System.out.println("User Id Already Exist.");
-                return;
-            }
+        if(users.containsKey(userId)){
+            System.out.println("User Already Exist.");
         }
-        User student = new Student(userId, name, course);
-        users.add(student);
+        else{
+            Student s = new Student(userId, name, course);
+            users.put(userId , s);
+            System.out.println("Student Added");
+        }
     }
 
     void addTeacher(int userId, String name, String department){
-        for(User u : users){
-            if(u.getUserId()==userId){
-                System.out.println("User Id Already Exist.");
-                return;
-            }
+        if(users.containsKey(userId)){
+            System.out.println("User Already Exist.");
         }
-        User teacher = new Teacher(userId, name, department);
-        users.add(teacher);
+        else{
+            Teacher t = new Teacher(userId, name, department);
+            users.put(userId , t);
+            System.out.println("Teacher Added");
+        }
     }
 
     void displayUsers(){
-        for(User u : users){
-            System.out.println("ID: "+u.getUserId()+"\nName: "+u.getName());
+        for(User u : users.values()){
+            System.out.println("UserId: "+u.getUserId()+"\nName: "+u.getName());
         }
     }
 
-    void addBook(int id, String title, String author){
-        for(Book b: books){
-            if(b.getId()==id){
-                System.out.println("Id Already Exist.");
-                return;
-            }
+    void addBook(int bookId, String title, String author){
+        if(books.containsKey(bookId)){
+            System.out.println("Book Already Exists.");
         }
-        Book b1 = new Book(id,title,author); 
-        books.add(b1);
-        System.out.println("Book Added");
+        else{
+            Book b =new Book(bookId, title, author);
+            books.put(bookId, b);
+            System.out.println("Book Added.");
+        }
     }
 
-    void removeBook(int id){
-        for(int i=0;i<books.size();i++){
-            Book b = books.get(i);
-            if(b.getId()==id){
-                books.remove(b);
-                System.out.println("Book Removed.");
-                return;
-            }
+    void removeBook(int bookId){
+        if(books.containsKey(bookId)){
+            books.remove(bookId);
+            System.out.println("Book Revomed.");
         }
-        System.out.println("Book Not Found");
+        else{
+            System.out.println("Book Not Found.");
+        }
     }
 
     void searchBooks(String name){
         name = name.toLowerCase();
         System.out.println("Searching...");
-        for(Book b : books){
-            String title = b.getTitle().toLowerCase();
-
-            if(title.contains(name)){String borrowerName; if(b.getBorrower()==null) borrowerName = "none"; else borrowerName = b.getBorrower().getName(); System.out.println("ID: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor()+"\nIssued to: "+borrowerName);} 
+        for(Integer bookId : books.keySet()){
+            Book b = books.get(bookId);
+            String borrowerName;
+            if(b.getBorrower()!=null) borrowerName = b.getBorrower().getName();
+            else borrowerName = "None";
+            if(b.getTitle().toLowerCase().contains(name)) System.out.println("BookId: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor()+"\nIssued to: "+borrowerName);
         }
-        
     }
 
     void displayBooks(){
         if(books.size()==0){
             System.out.println("NO books Available."); return;
         }
-        for(Book b : books){
+        for(Book b : books.values()){
             String borrowerName; if(b.getBorrower()==null) borrowerName = "none"; else borrowerName = b.getBorrower().getName();
             System.out.println("ID: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor()+"\nIssued to: "+borrowerName);
         }
@@ -145,44 +144,28 @@ class Library{
     }
 
     void issueBook(int bookId, int userId){
-        for(Book b : books){
-            if(b.getId()==bookId){
-                if(b.getBorrower()==null){
-                    for(User u : users){
-                        if(u.getUserId()==userId){
-                            b.setBorrower(u);
-                            System.out.println("Book issued to "+u.getName());
-                            return;
-                        }
-                        
-                    }
-                    System.out.println("User Not Found");
-                    return;
+        if(books.containsKey(bookId)){
+            if(books.get(bookId).getBorrower()==null){
+                if(users.containsKey(userId)){
+                    books.get(bookId).setBorrower(users.get(userId));
+                    System.out.println("Book Issued");
                 }
-                else{
-                    System.out.println("Book Already Issued/Not Available.");
-                    return;
-                }
+                else System.out.println("User Don't Exist");
             }
+            else System.out.println("Book Already issued to: "+books.get(bookId).getBorrower().getName());
         }
-        System.out.println("Book Not Found");
+        else System.out.println("Book Not Found");
     }
 
     void returnBook(int bookId){
-        for(Book b : books){
-            if(b.getId()==bookId){
-                if(b.getBorrower()!=null){
-                    b.setBorrower(null);
-                    System.out.println("Book Returned");
-                    return;
-                }
-                else{
-                    System.out.println("Book Already Returned.");
-                    return;
-                }
+        if(books.containsKey(bookId)){
+            if(books.get(bookId).getBorrower()!=null){
+                books.get(bookId).setBorrower(null);
+                System.out.println("Book Returned");
             }
+            else System.out.println("Book Already Returned");
         }
-        System.out.println("Book Not Found");
+        else System.out.println("Book Not Found");
     }
 
 
@@ -273,6 +256,7 @@ public class Main {
                 default:
                     break;
             }
+
         }
 
     }

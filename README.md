@@ -2,11 +2,19 @@
 Console-based Library Management System built using Java OOP concepts.
 
 ## Features
-- Add books
-- View books
-- Search books
-- Issue books
-- Return books
+- Add Student
+- Add Teacher
+- Search User
+- Display Users
+- Add Book
+- Remove Book
+- Search Book
+- Display Books
+- Issue Book
+- Return Book
+- Display Issued Books
+- Display Available Books
+- Books Issued to User
 
 ## Concepts Used
 - Classes and Objects
@@ -16,8 +24,7 @@ Console-based Library Management System built using Java OOP concepts.
 
 ## Future Improvements
 - File Handling
-- User Authentication
-- GUI Version
+
 
 ## Author
 Sumesh

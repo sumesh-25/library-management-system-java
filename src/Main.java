@@ -1,6 +1,13 @@
 import java.util.Scanner;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+
+
 class Book{
     private int book_id;
     private String title;
@@ -13,7 +20,7 @@ class Book{
         this.title=title;
         this.author=author;
         this.Borrower = null;
-        this.issueDate = null;
+        this.issueDate = null; 
     }
 
     int getId(){
@@ -100,107 +107,199 @@ class Teacher extends User{
     }
 } 
 
+
+
 class Library{
+    private final String url = "jdbc:mysql://localhost:3306/librarydb";
+    private final String username = "root";
+    private final String password = "Sumesh@9406";
+
+    Connection connection() throws SQLException{
+            Connection connection = DriverManager.getConnection(url,username,password);
+            return connection;
+    }
+    
+    
+
     HashMap<Integer, Book> books = new HashMap<>();
     HashMap<Integer, User> users = new HashMap<>();
+    
 
     void addStudent(int userId, String name, String course){
-        if(users.containsKey(userId)){
-            System.out.println("User Already Exist.");
-        }
-        else{
-            Student s = new Student(userId, name, course);
-            users.put(userId , s);
+        
+        
+
+        try{
+            String addStudentQuery = "insert into users values(? ,? ,'Student' ,?)";
+            PreparedStatement AddStudentStatement = connection().prepareStatement(addStudentQuery);
+            AddStudentStatement.setInt(1,userId);
+            AddStudentStatement.setString(2, name);
+            AddStudentStatement.setString(3, course);
+            AddStudentStatement.executeUpdate();
             System.out.println("Student Added");
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
         }
     }
 
     void addTeacher(int userId, String name, String department){
-        if(users.containsKey(userId)){
-            System.out.println("User Already Exist.");
-        }
-        else{
-            Teacher t = new Teacher(userId, name, department);
-            users.put(userId , t);
+        try{
+            String AddTeacherQuery = "insert into users values(?, ?, 'Teacher', ?)";
+            PreparedStatement AddTeacherStatment = connection().prepareStatement(AddTeacherQuery);
+            AddTeacherStatment.setInt(1,userId);
+            AddTeacherStatment.setString(2, name);
+            AddTeacherStatment.setString(3, department);
+            AddTeacherStatment.executeUpdate();
             System.out.println("Teacher Added");
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
         }
     }
 
-    void searchUsers(String name){
-        name = name.toLowerCase();
-        System.out.println("Searching...");
-        for(User u : users.values()){
-            if(u.getName().toLowerCase().contains(name)) System.out.println("UserId: "+u.getUserId()+"\nName: "+u.getName());
+    void searchUsers(String partOfName){
+        try{
+            boolean found = false;
+            System.out.println("Searching...");
+            String searchUserQuery = "select userId, name from users where name like ?";
+            PreparedStatement searchUserStatement = connection().prepareStatement(searchUserQuery);
+            searchUserStatement.setString(1, '%'+partOfName+'%');
+            ResultSet foundUsers = searchUserStatement.executeQuery();
+            
+            while(foundUsers.next()){
+                System.out.println("UserId: "+foundUsers.getInt("userid")+"\nName: "+foundUsers.getString("name"));
+                System.out.println("***************************************");
+                found = true;
+            }
+            if(found==false) System.out.println("No Users Fpund matching with the input.");
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
         }
     }
 
     void displayUsers(){
-        for(User u : users.values()){
-            System.out.println("UserId: "+u.getUserId()+"\nName: "+u.getName());
+        try{
+            String displayUsersQuery = "select * from users";
+            PreparedStatement displayUserStatement = connection().prepareStatement(displayUsersQuery);
+            ResultSet users = displayUserStatement.executeQuery();
+            if(!users.next()) System.out.println("No Users Exist.");
+            while(users.next()){
+                System.out.println("UserId: "+users.getInt("userid")+"\nName: "+users.getString("name")+"\nType: "+users.getString("type")+"\nCourse/Department: "+users.getString("Course_or_designation"));
+            }
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
         }
     }
 
-    void addBook(int bookId, String title, String author){
-        if(books.containsKey(bookId)){
-            System.out.println("Book Already Exists.");
-        }
-        else{
-            Book b =new Book(bookId, title, author);
-            books.put(bookId, b);
-            System.out.println("Book Added.");
+    void addBook(int bookId, String title, String author, int quantity){
+        try{
+            String addBookQuery = "insert into books values(?, ?, ?, ?)";
+            PreparedStatement addBookStatement = connection().prepareStatement(addBookQuery);
+            addBookStatement.setInt(1, bookId);
+            addBookStatement.setString(2, title);
+            addBookStatement.setString(3, author);
+            addBookStatement.setInt(4, quantity);
+            addBookStatement.executeUpdate();
+            System.out.println("Book Added to Library");
+
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
         }
     }
 
     void removeBook(int bookId){
-        if(books.containsKey(bookId)){
-            if(books.get(bookId).getBorrower()!=null){
-                System.out.println("Book Cannot be removed While Issued.");
+        try{
+            String bookIssueCheckQuery = "select userid from bookissued where bookid = ?";
+            String bookDeleteQuery = "delete from books where bookid = ?";
+            PreparedStatement bookIssueCheckStatement = connection().prepareStatement(bookIssueCheckQuery);
+            PreparedStatement bookDeleteStatement = connection().prepareStatement(bookDeleteQuery);
+            bookIssueCheckStatement.setInt(1, bookId);
+            ResultSet bookIssue = bookIssueCheckStatement.executeQuery();
+            if(!bookIssue.next()){
+                bookDeleteStatement.setInt(1, bookId);
+                bookDeleteStatement.executeUpdate();
+                System.out.println("Book Removed from library");
+                return;
             }
-            else{
-                books.remove(bookId);
-                System.out.println("Book Removed.");
-            }
+            System.out.println("Cannot Delete Book While Issued");
+            
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
         }
-        else{
-            System.out.println("Book Not Found.");
-        }
+
     }
 
-    void searchBooks(String name){
-        name = name.toLowerCase();
-        System.out.println("Searching...");
-        for(Integer bookId : books.keySet()){
-            Book b = books.get(bookId);
-            String borrowerName;
-            if(b.getBorrower()!=null) borrowerName = b.getBorrower().getName();
-            else borrowerName = "None";
-            if(b.getTitle().toLowerCase().contains(name)) System.out.println("BookId: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor()+"\nIssued to: "+borrowerName );
+    void searchBooks(String partOfTitle){
+        System.out.println("SEarching...");
+        try{
+            boolean found = false;
+            String searchBook = "select * from books where title like ?";
+            PreparedStatement searchBookStatement = connection().prepareStatement(searchBook);
+            searchBookStatement.setString(1, '%'+partOfTitle+'%');
+            ResultSet booksFound = searchBookStatement.executeQuery();
+            while(booksFound.next()){
+                System.out.println("BookId: "+booksFound.getInt("bookid")+"\nTitle: "+booksFound.getString("title")+"\nAuthor: "+booksFound.getString("Author")+"\nQuantity: "+booksFound.getInt("quantity"));
+                found = true;
+            }
+            if(found==false){
+                System.out.println("No Book Found to The Matching Input.");
+            }
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
         }
     }
 
     void displayBooks(){
-        if(books.size()==0){
-            System.out.println("NO books Available."); return;
-        }
-        for(Book b : books.values()){
-            String borrowerName; if(b.getBorrower()==null) borrowerName = "none"; else borrowerName = b.getBorrower().getName();
-            System.out.println("Book Id: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor()+"\nIssued to: "+borrowerName);
+        try{
+            String displayBooksQuery = "select * from books";
+            PreparedStatement displayBookStatement = connection().prepareStatement(displayBooksQuery);
+            ResultSet booksPresent = displayBookStatement.executeQuery();
+            while(booksPresent.next()){
+                System.out.println("BookId: "+booksPresent.getInt("bookid")+"\nTitle: "+booksPresent.getString("title")+"\nAuthor: "+booksPresent.getString("author")+"\nQuntity: "+booksPresent.getInt("quantity"));
+            }
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
         }
         
     }
 
     void displayIssuedBooks(){
-        for(Book b : books.values()){
-            if(b.getBorrower()!=null)
-                System.out.println("Book Id: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor()+"\nIssued to: "+b.getBorrower().getName()+"\nIssue Date: "+b.getIssueDate().getDay()+"/"+b.getIssueDate().getMonth()+"/"+b.getIssueDate().getYear());
+        try{
+            String retriveIssuedBooks = "select * from bookissued";
+            String bookInfoQuery = "select title, author from books where bookid = ?";
+            String borrowerInfoQuery = "select name, type from users  where userid = ?";
+            PreparedStatement bookInfoStatement = connection().prepareStatement(bookInfoQuery);
+            PreparedStatement borrowerInfoStatement = connection().prepareStatement(borrowerInfoQuery);
+            PreparedStatement retriveIssuedBooksStatement = connection().prepareStatement(retriveIssuedBooks);
+            ResultSet bookIssued = retriveIssuedBooksStatement.executeQuery();
+            while (bookIssued.next()) {
+                bookInfoStatement.setInt(1,bookIssued.getInt("bookid"));
+                borrowerInfoStatement.setInt(1, bookIssued.getInt("userid"));
+                ResultSet bookInfo = bookInfoStatement.executeQuery();
+                ResultSet borrowerInfo = borrowerInfoStatement.executeQuery();
+                System.out.println("Issued Id: "+bookIssued.getInt("issueid"));
+                System.out.println("--------------------------");
+                if(bookInfo.next()) System.out.println("\nBook Issued: \nBook Id: "+bookIssued.getInt("bookid")+"\nTitle: "+bookInfo.getString("title")+"\nAuthor: "+bookInfo.getString("author"));
+                System.out.println("--------------------------");
+                if(borrowerInfo.next()) System.out.println("Borrowed By: \nUserId: "+bookIssued.getInt("userid")+"\nName: "+borrowerInfo.getString("name")+"\nType: "+borrowerInfo.getString("type"));
+                System.out.println("****************************************");
+            }
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
         }
-        
     }
 
     void displayAvailableBooks(){
-        for(Book b : books.values()){
-            if(b.getBorrower()==null)
-                System.out.println("Book Id: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor());
+        try{
+            System.out.println("Books Available. \n============================");
+            String availableBooksQuery = "select * from books where quantity > 0";
+            PreparedStatement statement = connection().prepareStatement(availableBooksQuery);
+            ResultSet availableBooks = statement.executeQuery();
+            while(availableBooks.next()){
+                System.out.println("BookId: "+availableBooks.getInt("bookid")+"\nTitle: "+availableBooks.getString("title")+"\nAuthor: "+availableBooks.getString("author")+"\nQuantity: "+availableBooks.getInt("quantity"));
+                System.out.println("-------------------------------");
+            }
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
         }
         
     }
@@ -295,12 +394,12 @@ public class Main {
                     bookId = sc.nextInt();
                     sc.nextLine();
                     System.out.print("Enter Book Title: ");
-                    
                     String title = sc.nextLine();
                     System.out.print("Enter Author Name: ");
-                    
                     String author = sc.nextLine();
-                    l.addBook(bookId,title,author);
+                    System.out.print("Enter Quantity: ");
+                    int quantity = sc.nextInt();
+                    l.addBook(bookId,title,author,quantity);
                     break;
                 
                 case 6:

@@ -4,109 +4,8 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-
-
-class Book{
-    private int book_id;
-    private String title;
-    private String author;
-    private User Borrower;
-    private Date issueDate;
-
-    Book(int book_id,String title, String author){
-        this.book_id=book_id;
-        this.title=title;
-        this.author=author;
-        this.Borrower = null;
-        this.issueDate = null; 
-    }
-
-    int getId(){
-        return book_id;
-    }
-    String getTitle(){
-        return title;
-    }
-    String getAuthor(){
-        return author;
-    }
-    User getBorrower(){
-        return Borrower;
-    }
-    Date getIssueDate(){
-        return issueDate;
-    }
-    void setBorrower(User borrower){
-        this.Borrower = borrower;
-    }
-    void setIssueDate(Date issueDate){
-        this.issueDate = issueDate;
-    }
-}
-
-class Date{
-    int day;
-    int month;
-    int year;
-    Date(int day, int month, int year){
-        if(day<1 || day>31 || month<1 || month>12 || year<0){
-            System.out.println("Invalid Date");
-        }
-        else{
-            this.day=day;
-            this.month=month;
-            this.year=year;
-        }
-    }
-    int getDay(){
-        return day;
-    }
-    int getMonth(){
-        return month;
-    }
-    int getYear(){
-        return year;
-    }
-}
-
-class User{
-    private int userId;
-    private String name;
-    User(int userId, String name){
-        this.userId = userId;
-        this.name=name;
-    }
-
-    int getUserId(){
-        return userId;
-    }
-
-    String getName(){
-        return name;
-    }
-
-    
-}
-
-class Student extends User{
-    private String course;
-    Student(int userId, String name, String course){
-        super(userId,name);
-        this.course=course;
-    }
-    
-}
-
-class Teacher extends User{
-    private String department;
-    Teacher(int userId, String name, String department){
-        super(userId,name);
-        this.department=department;
-    }
-} 
-
+import java.sql.Date;
+import java.time.LocalDate;
 
 
 class Library{
@@ -119,12 +18,6 @@ class Library{
             return connection;
     }
     
-    
-
-    HashMap<Integer, Book> books = new HashMap<>();
-    HashMap<Integer, User> users = new HashMap<>();
-    
-
     void addStudent(int userId, String name, String course){
         
         
@@ -305,43 +198,80 @@ class Library{
     }
 
     void issueBook(int bookId, int userId, Date issueDate){
-        if(books.containsKey(bookId)){
-            if(books.get(bookId).getBorrower()==null){
-                if(users.containsKey(userId)){
-                    books.get(bookId).setBorrower(users.get(userId));
-                    books.get(bookId).setIssueDate(issueDate);
+        try{
+            String ifAvailableQuery ="select quantity from books where bookId = ?";
+            PreparedStatement ifAvailableStatement = connection().prepareStatement(ifAvailableQuery);
+            ifAvailableStatement.setInt(1,bookId);
+            ResultSet ifAvailable = ifAvailableStatement.executeQuery();
+            if(ifAvailable.next()){
+                if(ifAvailable.getInt("quantity")>0){
+                    String issueBookQuery = "insert into bookissued(bookid,userid,issuedate) values(?,?,?)";
+                    String updateQuantityQuery = "update books set quantity = quantity - 1 where bookid = ?";
+                    PreparedStatement issueBookStatement = connection().prepareStatement(issueBookQuery);
+                    PreparedStatement updateQuantity = connection().prepareStatement(updateQuantityQuery);
+                    issueBookStatement.setInt(1,bookId);
+                    issueBookStatement.setInt(2, userId);
+                    issueBookStatement.setDate(3, issueDate);
+                    updateQuantity.setInt(1, bookId);
+                    issueBookStatement.executeUpdate();
+                    updateQuantity.executeUpdate();
                     System.out.println("Book Issued");
                 }
-                else System.out.println("User Don't Exist");
+                else{
+                    System.out.println("Book Not Available");
+                }
             }
-            else System.out.println("Book Already issued to: "+books.get(bookId).getBorrower().getName());
+            else{
+                System.out.println("Book Not present");
+            }
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
         }
-        else System.out.println("Book Not Found");
     }
 
     void returnBook(int bookId){
-        if(books.containsKey(bookId)){
-            if(books.get(bookId).getBorrower()!=null){
-                books.get(bookId).setBorrower(null);
-                books.get(bookId).setIssueDate(null);
-                System.out.println("Book Returned");
-            }
-            else System.out.println("Book Already Returned");
+        try{
+            String returnQuery = "delete from bookissued where bookid = ?";
+            String updateQuantityQuery = "update books set quantity = quantity + 1 where bookid = ?";
+            PreparedStatement returnStatement = connection().prepareStatement(returnQuery);
+            PreparedStatement updateQuantity = connection().prepareStatement(updateQuantityQuery);
+            returnStatement.setInt(1, bookId);
+            updateQuantity.setInt(1, bookId);
+            returnStatement.executeUpdate();
+            updateQuantity.executeUpdate();
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
         }
-        else System.out.println("Book Not Found");
     }
 
     void UserBorrowedBooks(int userId){
-        if(users.containsKey(userId)){
-            for(Book b : books.values()){
-                if(b.getBorrower()!=null && b.getBorrower().getUserId()==userId){
-                    System.out.println("Book Id: "+b.getId()+"\nTitle: "+b.getTitle()+"\nAuthor: "+b.getAuthor()+"\nIssue Date: "+b.getIssueDate().getDay()+"/"+b.getIssueDate().getMonth()+"/"+b.getIssueDate().getYear());
-                }
+        try{
+            String userBorrowedBooksQuery = "select issueid,bookid,issuedate from bookissued where userid = ?";
+            String userInfoQuery = "select userid, name, type from users where userid = ?";
+            String bookInfoQuery = "select bookid, title, author from books where bookid =?";
+            PreparedStatement userBorrowedBookStatement = connection().prepareStatement(userBorrowedBooksQuery);
+            PreparedStatement userInfoStatement = connection().prepareStatement(userInfoQuery);
+            PreparedStatement bookInfoStatement = connection().prepareStatement(bookInfoQuery);
+            userBorrowedBookStatement.setInt(1,userId);
+            userInfoStatement.setInt(1,userId);
+            ResultSet bookids = userBorrowedBookStatement.executeQuery();
+            ResultSet userInfo = userInfoStatement.executeQuery();
+            if(userInfo.next()){
+                System.out.println("******************************");
+                System.out.println("User Id: "+userInfo.getInt("userid")+"\nName: "+userInfo.getString("name")+"\nType: "+userInfo.getString("type"));
+                System.out.println("===========================");
             }
-        }
-        else{
-            System.out.println("User Not Found");
-            return;
+            while(bookids.next()){
+                bookInfoStatement.setInt(1, bookids.getInt("bookid"));
+                ResultSet book = bookInfoStatement.executeQuery();
+                if(book.next()){
+                    System.out.println("Issue Id: "+bookids.getInt("issueid")+"\nBook Id: "+book.getInt("bookid")+"\nTitle"+book.getString("title")+"\nAuthor: "+book.getString("author")+"\nIssue Date: "+bookids.getDate("issuedate"));
+                    System.out.println("-----------------------------");
+                }
+
+            }
+        }catch(SQLException e){
+            System.out.println(e.getMessage());
         }
     }
 
@@ -426,10 +356,7 @@ public class Main {
                     System.out.print("Enter User Id: ");
                     userId = sc.nextInt();
                     System.out.print("Enter Issue date (DD MM YYYY): ");
-                    int day = sc.nextInt();
-                    int month = sc.nextInt();
-                    int year = sc.nextInt();
-                    Date issueDate = new Date(day, month, year);
+                    Date issueDate = Date.valueOf(LocalDate.now());
                     l.issueBook(bookId,userId,issueDate);
                     break;
 
